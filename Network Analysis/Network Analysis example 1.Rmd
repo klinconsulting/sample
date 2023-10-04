@@ -1,0 +1,250 @@
+---
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r warning=FALSE}
+library(igraph)
+library(dplyr)
+library(ggplot2)
+
+
+```
+
+
+
+```{r warning=FALSE}
+# reading data
+df_s3q1 <- read.table("graph_subset_rank1000.txt", header = TRUE, sep = " ")
+df_s3q2 <- read.table("graph_subset_rank1000_cc.txt", header = TRUE, sep = " ")
+df_gc <- read.table("graph_complete.txt", header = TRUE, sep = " ")
+#df_id_to_title <- read.table("id_to_titles.txt", header = TRUE, sep = " ")
+df_id_to_title <- read.csv("id_to_titles.txt", sep = " ")
+
+# change column names
+colnames(df_s3q1) <- c("from","to")
+colnames(df_s3q2) <- c("from","to")
+colnames(df_gc) <- c("from","to")
+
+```
+
+
+Section 3 - part 1
+
+```{r warning=FALSE, fig.width=12, fig.height=8}
+
+g_s3q1 <- graph_from_data_frame(df_s3q1, directed = FALSE)
+
+
+# find out degrees of the nodes *
+all_degrees <- degree(g_s3q1, mode="all")
+
+# sort nodes by out degrees in decreasing order *
+sorted_nodes_s3q1 <- order(all_degrees, decreasing = TRUE)
+
+# top 10 nodes with most out degrees *
+top_10_nodes <- sorted_nodes_s3q1[1:10]
+
+# Create a vector of labels for all nodes (initialize with empty strings) *
+labels <- rep("", vcount(g_s3q1))
+
+# Set labels for the top 10 out-degree nodes (customize the labels as needed)
+labels[top_10_nodes] <- as.character(all_degrees[top_10_nodes])
+
+plot(g_s3q1, 
+     layout = layout.kamada.kawai(g_s3q1), vertex.size=degree(g_s3q1),
+     vertex.label = labels,edge.width = 2, edge.color = "black",
+     vertex.label.cex = 1.5)
+
+```
+
+Comments:
+
+The networks exhibit several significant clusters, with labeled nodes representing those ranking within the top 10 in terms of their connected edges, both inbound and outbound. These clusters may suggest similarities or complementary relationships among product pages.
+
+
+Section 3 - part 2
+
+```{r warning=FALSE,fig.width=18, fig.height=18}
+
+g_s3q2 <- graph_from_data_frame(df_s3q2, directed = FALSE)
+
+# vertex.label = NA *
+plot(g_s3q2, 
+     layout = layout.kamada.kawai(g_s3q2), vertex.label = NA, vertex.size=degree(g_s3q2))
+
+```
+
+Section 4 - part1 (a)
+
+```{r warning=FALSE}
+# compute the number of outbound links for each product
+# directed = TRUE so that we can extract out-degree distributions
+g_s4q1 <- graph_from_data_frame(df_gc, directed = TRUE)
+out_degrees <- degree(g_s4q1, mode = "out")
+
+head(out_degrees)
+
+# interpretation: product id 204319 has out-degree = 4, product id 1046 has out-degree = 2 
+```
+Section 4 - part1 (b)
+
+
+```{r warning=FALSE}
+out_degrees_dist <- table(out_degrees)
+
+out_degrees_dist
+
+```
+
+Section 4 - part1 (c)
+
+```{r warning=FALSE}
+
+
+# plot of out degree distribution
+df_out_degree <- data.frame(x = out_degrees_dist)
+
+ggplot(data = df_out_degree, aes(x=as.numeric(x.out_degrees))) +
+  geom_density(color = 'blue') +
+  labs(
+    title = "Density Plot of Out-Degree Distribution",
+    x = "Number of Out-Degree",
+    y = "Density"
+  ) +
+  scale_x_continuous(expand = c(0, 0), name = "Degrees", breaks = 0:5, limits = c(0, 5))+
+  theme_bw()
+
+
+
+```
+
+Section 4 - Q2
+
+```{r warning=FALSE}
+
+in_degrees <- degree(g_s4q1, mode = "in")
+in_degrees_dist <- table(in_degrees)
+
+#in_degrees_dist
+
+# plot of out degree distribution
+df_in_degree <- data.frame(x = in_degrees_dist)
+
+# convert data type from factor to numeric for easy plotting
+df_in_degree <- df_in_degree %>%
+  mutate(x.in_degrees = as.numeric(levels(x.in_degrees))[x.in_degrees])
+
+ggplot(data = df_in_degree, aes(x=x.in_degrees)) +
+  geom_density(color = 'blue') +
+  labs(
+    title = "Density Plot of In-Degree Distribution",
+    x = "Number of In-Degree",
+    y = "Density"
+  ) +
+   scale_x_continuous(
+    breaks = seq(min(df_in_degree$x.in_degrees),
+                max(df_in_degree$x.in_degrees), by = 50))+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ # theme_bw()
+
+
+```
+Comments:
+
+The in-degree distribution spans from 0 to 549, while the out-degree distribution ranges from 0 to 5. The in-degree distribution exhibits a peak between 50 and 100 with a right-skewed tail ( a few nodes with very high in-degrees).
+
+Section 4 - Q3
+
+```{r warning=FALSE}
+# replacing 0 with 0.1 to avoid log function failure
+df_in_degree_q4 <- df_in_degree %>%
+  mutate(x.in_degrees = ifelse(x.in_degrees==0,0.1, x.in_degrees))
+
+# plot with log scale on the x-axis
+
+ggplot(data = df_in_degree_q4, aes(x=as.numeric(x.in_degrees))) +
+  geom_density(color = 'blue') +
+  labs(
+    title = "Density Plot of In-Degree (log) Distribution",
+    x = "Number of In-Degree in Log Scale",
+    y = "Density"
+  ) +
+  scale_x_log10() +
+   # scale_x_continuous(
+   #  breaks = c(0.1,10,100,549),  # Specify the desired breaks in log scale
+   #  labels = c("-1","1","2","2.74")  # Specify labels for each break
+   #   )+
+   
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  theme_bw()
+
+
+
+```
+
+Comments:
+
+After applying the scale_x_log10 function to compress the data, the peak density of the in-degree distribution is centered around 100. The right-skewed data points are visibly compressed, allowing for a more focused analysis on the higher density region. Logarithmic scales are particularly useful for visualizing skewed data distributions, where the majority of data points are concentrated in a narrow range with a few extreme outliers. This transformation facilitates a clearer examination of both the central data cluster and the outlier observations.
+
+
+Section 4 - Q4
+
+
+
+```{r warning=FALSE}
+
+# Compute the average number of inbound co-purchase links, the standard deviation, and the
+# maximum.
+
+df_in_degree_summary <- df_in_degree %>% summarize(avg_degree = mean(x.in_degrees),
+                                                   std_degree = sd(x.in_degrees),
+                                                   max_degree = max(x.in_degrees)) 
+df_in_degree_summary
+
+```
+
+Comments:
+
+Based on the results of average number of inbound co-purchase links, the standard deviation, and the
+maximum, the network exhibits significant variability and asymmetry
+
+Out-degree Ranging from 0 to 5: The out-degree represents the number of outgoing connections from a node. In your network, nodes have a relatively limited number of outgoing connections, ranging from 0 (indicating nodes with no outgoing connections) to 5 (indicating nodes with up to 5 outgoing connections). This suggests that most nodes have few outgoing connections, but there are a few nodes with relatively more.
+
+In-degree Ranging from 0 to 549: The in-degree represents the number of incoming connections to a node. The range of in-degrees is much wider, with some nodes having no incoming connections (in-degree 0), while others have a substantial number of incoming connections (up to 549). This indicates significant variability in the number of connections nodes receive from other nodes.
+
+Average In-degree of 88: The average in-degree of 88 suggests that, on average, each node in your network receives incoming connections from approximately 88 other nodes. This is considerably higher than the out-degree, indicating that your network has a skewed or hierarchical structure with a few highly connected nodes.
+
+Standard Deviation of 70: The standard deviation measures the dispersion or variability in the in-degree values. A standard deviation of 70 means that the in-degree values are spread out from the mean by a substantial amount. This reinforces the idea that there is significant heterogeneity in the number of incoming connections nodes have.
+
+Overall, the network analysis result indicates that your network is not uniform in its connectivity. It likely exhibits a "scale-free" or "heterogeneous" network structure, where a few nodes (often referred to as "hubs") have many connections, while the majority of nodes have relatively few connections. This type of structure is common in many real-world networks, such as social networks and the World Wide Web.
+
+
+
+
+Section 4 - Q5
+
+```{r warning=FALSE}
+# Report the names of the 10 products with the most inbound co-purchase links.
+top10_id <- names(head(sort(in_degrees, decreasing = TRUE),10))
+
+# Top 10 Product Names:
+df_id_to_title %>% filter(id %in% top10_id) %>% select(title) %>% pull()
+
+```
+
+
+
+```{r warning=FALSE}
+
+
+```
+
