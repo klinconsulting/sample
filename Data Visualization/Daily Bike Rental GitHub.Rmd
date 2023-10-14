@@ -1,0 +1,310 @@
+---
+title: "Daily Bike Data Example"
+output: word_document
+date: 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
+library(rpart)
+library(rpart.plot)
+library(ggExtra)
+
+```
+
+
+
+```{r warning=FALSE}
+# read input data
+df <- read.csv("bikesharedailydata.csv")
+
+```
+
+Step 1: Create the following charts in ggplot to show categories, trends, distributions, and relationships
+
+* Bar chart
+* Line chart
+* Stacked area
+* Histogram
+* Density plot
+* Boxplot
+* Scatterplot
+
+
+```{r warning=FALSE, fig.width=10, fig.height=10}
+# Bar chart: average temperature by season
+df_temp_by_season <- df %>% group_by(season) %>% summarize(avg_temp = mean(temp, na.rm=TRUE))
+df_temp_by_season <- df_temp_by_season %>% mutate(season_label = ifelse(season == 1, "Winter", 
+                     ifelse(season==2, "Sprint", ifelse(season==3,"Summer",
+                     ifelse(season==4, "Fall",""))))) %>% filter(!is.na(season)) %>%
+                     select(season_label, avg_temp)
+
+g_bar <- ggplot(data=df_temp_by_season, aes(x=season_label, y=avg_temp)) + 
+         geom_bar(stat = "identity", fill = "blue")
+
+# Line chart: Normalized humidity by date
+
+df$dteday <- as.Date(df$dteday, format = "%m/%d/%y")
+
+g_line <- ggplot(data=df, aes(x=dteday, y=hum)) + geom_line()
+
+# Stacked Area: percentage of causal / registered users
+
+df_stacked <- df %>% select(dteday, casual, registered)
+df_stacked_long <- df_stacked %>%
+  pivot_longer(cols = c("casual","registered"), names_to = "user_type", values_to = "value")
+
+g_stacked_area <- ggplot(df_stacked_long, aes(x = dteday, y = value, fill = user_type)) +
+  geom_area()
+
+# Histogram: windspeed
+g_histogram <- ggplot(data=df, aes(x=windspeed)) + geom_histogram()
+
+# Density plot: Boday temperature (atemp)
+
+g_density <- ggplot(df, aes(x = atemp)) +
+  geom_density() 
+
+# Boxplot: total rental bikes by working day
+df$workingday <- as.factor(df$workingday)
+
+g_box <- ggplot(df, aes(x = workingday, y = cnt)) +
+  geom_boxplot()
+
+# Scatterplot: hum vs. Feeling Temperature (atemp)
+g_scatter <- ggplot(data=df, aes(x=hum, y=atemp)) + geom_point()
+
+# Arrange ggplot objects in a 4x2 grid
+grid.arrange(
+  g_bar, g_line, g_stacked_area, g_histogram, g_density, g_box, g_scatter,
+  ncol = 2  # Number of columns
+)
+
+
+```
+
+Step 2: Modify each chart (as shown in the video above) to apply the principles of design. Axis labels, titles, subtitles, and captions must be meaningful (placeholder text was used in the example given). Charts must communicate a key insight that is written in the title.
+
+
+```{r warning=FALSE, fig.width=8, fig.height=8}
+
+# Bar chart: average temperature by season
+g_bar <- g_bar +  labs(
+    title = "Bar Chart",
+    x = "Season",
+    y = "Average Temperature",
+    subtitle = "Average Temperature By Season",
+    caption = "Summer has the highest average temperature, followed by Spring, Fall and Winter in this order"
+  ) + theme(
+  axis.text.x = element_text(size = 10),   # Increase x-axis label font size
+  axis.text.y = element_text(size = 10),   # Increase y-axis label font size
+  axis.title.x = element_text(size = 12),  # Increase x-axis title font size
+  axis.title.y = element_text(size = 12),  # Increase y-axis title font size
+  plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Increase title font size and make it bold
+  plot.subtitle = element_text(size = 10, hjust = 0.5),  # Center-align the subtitle
+  plot.caption = element_text(size = 10, hjust = 0.5) 
+)
+
+# Line chart: Normalized humidity by date
+g_line <- ggplot(data=df, aes(x=dteday, y=hum)) + geom_line(color="blue") +  labs(
+    title = "Line Chart",
+    x = "Date",
+    y = "Humidity",
+    subtitle = "Humidity Time Series",
+    caption = "Humidity is higher in summer and relatively stable for the rest of the year"
+  ) + theme(
+  axis.text.x = element_text(size = 10),   # Increase x-axis label font size
+  axis.text.y = element_text(size = 10),   # Increase y-axis label font size
+  axis.title.x = element_text(size = 12),  # Increase x-axis title font size
+  axis.title.y = element_text(size = 12),  # Increase y-axis title font size
+  plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Increase title font size and make it bold
+  plot.subtitle = element_text(size = 10, hjust = 0.5),  # Center-align the subtitle
+  plot.caption = element_text(size = 10, hjust = 0.5) 
+)
+
+# Stacked Area: percentage of causal / registered users
+g_stacked_area <- g_stacked_area + labs(
+    title = "Stacked Area Chart",
+    x = "Date",
+    y = "Stacked User Type Count",
+    subtitle = "Casual and Registered Users Count",
+    caption = "Registered users represent majority portion of bike rental, especially during winter season."
+  ) + theme(
+  axis.text.x = element_text(size = 10),   # Increase x-axis label font size
+  axis.text.y = element_text(size = 10),   # Increase y-axis label font size
+  axis.title.x = element_text(size = 12),  # Increase x-axis title font size
+  axis.title.y = element_text(size = 12),  # Increase y-axis title font size
+  plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Increase title font size and make it bold
+  plot.subtitle = element_text(size = 10, hjust = 0.5),  # Center-align the subtitle
+  plot.caption = element_text(size = 10, hjust = 0.5) 
+)
+
+# Histogram: windspeed
+g_histogram <- g_histogram + geom_histogram(binwidth = 0.1, fill = "green", color = "black") + labs(
+    title = "Histogram",
+    x = "Wind Speed",
+    y = "Counts",
+    subtitle = "Distribution of Normalized Wind Speed",
+    caption = "Normalized wind speed centers between 0.1 and 0.2 with right skewed tail"
+  ) + theme(
+  axis.text.x = element_text(size = 10),   # Increase x-axis label font size
+  axis.text.y = element_text(size = 10),   # Increase y-axis label font size
+  axis.title.x = element_text(size = 12),  # Increase x-axis title font size
+  axis.title.y = element_text(size = 12),  # Increase y-axis title font size
+  plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Increase title font size and make it bold
+  plot.subtitle = element_text(size = 10, hjust = 0.5),  # Center-align the subtitle
+  plot.caption = element_text(size = 10, hjust = 0.5) 
+)
+
+
+# Density plot: Feeling Temperature (atemp)
+
+g_density <- g_density + geom_density(fill = "blue", color = "black") + labs(
+    title = "Density Chart",
+    x = "Feeling Temperature: Normalized feeling temperature in Celsius",
+    y = "Density",
+    subtitle = "Density of Normalized Feeling Temperature",
+    caption = "The density of normalized Feeling Temperature resembles multimodal distribution, which has twin peaks: one centers around 0.3 and another around 0.6"
+  ) + theme(
+  axis.text.x = element_text(size = 10),   # Increase x-axis label font size
+  axis.text.y = element_text(size = 10),   # Increase y-axis label font size
+  axis.title.x = element_text(size = 12),  # Increase x-axis title font size
+  axis.title.y = element_text(size = 12),  # Increase y-axis title font size
+  plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Increase title font size and make it bold
+  plot.subtitle = element_text(size = 10, hjust = 0.5),  # Center-align the subtitle
+  plot.caption = element_text(size = 10, hjust = 0.5) 
+)
+
+
+# Boxplot: total rental bikes by working day
+
+g_box <- ggplot(df, aes(x = workingday, y = cnt, fill=workingday)) + geom_boxplot(color = "black") + labs(
+    title = "Boxplot",
+    x = "Working Day Type",
+    y = "Total Rental Bikes",
+    subtitle = "Total Rental Bikes by Working Day Type",
+    caption = "Working day has slightly higher average # of total rental bikes with lower variance. Both working day types have no outliers."
+  ) + theme(
+  axis.text.x = element_text(size = 10),   # Increase x-axis label font size
+  axis.text.y = element_text(size = 10),   # Increase y-axis label font size
+  axis.title.x = element_text(size = 12),  # Increase x-axis title font size
+  axis.title.y = element_text(size = 12),  # Increase y-axis title font size
+  plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Increase title font size and make it bold
+  plot.subtitle = element_text(size = 10, hjust = 0.5),  # Center-align the subtitle
+  plot.caption = element_text(size = 10, hjust = 0.5) 
+)
+
+
+
+# Scatterplot: hum vs. Feeling Temperature (atemp)
+
+g_scatter <- g_scatter + geom_point(color = "blue", size = 3) + labs(
+    title = "Scatter Plot",
+    x = "Normalized Humidity",
+    y = "Feeling Temperature: Normalized feeling temperature in Celsius",
+    subtitle = "Normalized Feeling Temperature vs. Normalized Humidity",
+    caption = "The scatter plot exhibits positive relationship between normalized feeling temperature and normalized humidity"
+  ) + theme(
+  axis.text.x = element_text(size = 10),   # Increase x-axis label font size
+  axis.text.y = element_text(size = 10),   # Increase y-axis label font size
+  axis.title.x = element_text(size = 12),  # Increase x-axis title font size
+  axis.title.y = element_text(size = 12),  # Increase y-axis title font size
+  plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Increase title font size and make it bold
+  plot.subtitle = element_text(size = 10, hjust = 0.5),  # Center-align the subtitle
+  plot.caption = element_text(size = 10, hjust = 0.5) 
+)
+
+
+
+
+### Dsiplay chart one by one
+g_bar
+g_line
+g_stacked_area
+g_histogram
+g_density
+g_box
+g_scatter
+
+
+
+```
+
+Step 3: Invent your own chart style. Design aesthetics must be your own. Do not use Avenir font or the fill color (#4cbea3) as shown in the video.
+
+Comment: A positive linear correlation is evident between the perceived temperature and the total number of bike rentals for both clear and cloudy weather conditions. When examining the distribution of total bike rentals based on weather patterns, it becomes apparent that the average number of rentals during clear and cloudy weather conditions significantly exceeds that during rainy or snowy weather. Moreover, the total rentals are tightly clustered around a normalized perceived temperature of 0.4 for rainy or snowy weather conditions
+
+
+```{r warning=FALSE, fig.width=8, fig.height=8}
+df$weather <- ifelse(df$weathersit==1, "Clear", 
+                          ifelse(df$weathersit==2,"Cloudy","Rain or Snow"))
+
+g_scatter_step3 <- ggplot(data=df, aes(x=atemp, y=cnt, colour=weather)) + 
+                   geom_point(size = 3) + labs(
+    title = "Scatter Plot",
+    x = "Normalized Feeling Temperature",
+    y = "Total Rental Bikes",
+    subtitle = "Total Rental Bikes vs. Normalized Feeling Temerpature by Weather",
+    caption = "There is a postive linear relationship between normalized feeling temperature and total bike rentals for Clear and Cloudy weather pattern."
+  ) + theme(
+  axis.text.x = element_text(size = 10),   # Increase x-axis label font size
+  axis.text.y = element_text(size = 10),   # Increase y-axis label font size
+  axis.title.x = element_text(size = 12),  # Increase x-axis title font size
+  axis.title.y = element_text(size = 12),  # Increase y-axis title font size
+  plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Increase title font size and make it bold
+  plot.subtitle = element_text(size = 10, hjust = 0.5),  # Center-align the subtitle
+  plot.caption = element_text(size = 10, hjust = 0.5) 
+)
+
+ggMarginal(g_scatter_step3, groupColour = TRUE, groupFill = TRUE)
+
+```
+
+Step 4: Decision Tree
+
+Comment:
+
+High volume of bike rentals are more concentrated when the following criteria are met:
+
+1. Normalized temperature is equal or above 0.46.
+
+2. Normalized humidity is less than 0.85.
+
+3. Normalized wind speed is less than 0.18.
+
+
+```{r warning=FALSE,fig.width=12, fig.height=8}
+rental_median <- median(df$cnt)
+
+# target variable: if the total rental bike > the median, it is a high volume rental and vice versa.
+df$high_rental <- ifelse(df$cnt > rental_median,"High Vol","Low Vol")
+
+tree_mod <- rpart(high_rental~season+holiday+weekday+workingday+
+                           weathersit+temp+hum+windspeed, data = df,
+                         method = "class")
+
+
+prp(tree_mod, 
+    type = 1,               # Set type to 2 for a split-type tree plot
+    extra = 2,            # Control how splits are drawn
+    nn.cex = 1,
+    branch = 1,           # Set branch line width
+    box.col = "lightblue",  # Set node box color
+    split.col = "blue",     # Set split color
+    faclen = 1,             # Control the length of factor levels
+    cex = 3,              # Set text size
+    tweak = 0.4,            # Tweak to adjust node spacing
+    space = 5
+    )
+
+```
+
+
